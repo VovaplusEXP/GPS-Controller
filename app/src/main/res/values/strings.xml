@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS-Controller</string>
+    
+    <!-- Setup Activity -->
+    <string name="setup_welcome">Добро пожаловать в GPS-Controller</string>
+    <string name="setup_description">Продолжайте определять своё местоположение даже при потере GPS-сигнала</string>
+    <string name="setup_permissions">Необходимые разрешения</string>
+    <string name="setup_location_permission">Доступ к местоположению</string>
+    <string name="setup_bluetooth_permission">Bluetooth для P2P синхронизации</string>
+    <string name="setup_mock_location">Mock Location Provider</string>
+    <string name="setup_map_download">Загрузка карты</string>
+    <string name="setup_map_optional">Необязательно, но рекомендуется для привязки к дорогам</string>
+    <string name="setup_skip">Пропустить</string>
+    <string name="setup_download">Загрузить</string>
+    <string name="setup_calibration">Калибровка датчиков</string>
+    <string name="setup_calibration_instruction">Двигайте телефон восьмёркой для калибровки</string>
+    <string name="setup_start">Начать</string>
+    <string name="setup_next">Далее</string>
+    
+    <!-- Main Activity -->
+    <string name="gps_status">Статус GPS</string>
+    <string name="gps_active">Работает</string>
+    <string name="gps_lost">Потерян</string>
+    <string name="gps_spoofed">Спуффинг!</string>
+    <string name="navigation_mode">Режим навигации</string>
+    <string name="mode_gps">GPS</string>
+    <string name="mode_inertial">Инерциальная</string>
+    <string name="mode_hybrid">Гибридная</string>
+    <string name="accuracy">Точность</string>
+    <string name="confidence">Уверенность</string>
+    <string name="speed">Скорость</string>
+    <string name="bearing">Направление</string>
+    <string name="time_since_gps">Время с GPS</string>
+    
+    <!-- Peer Devices -->
+    <string name="peer_devices">Подключённые устройства</string>
+    <string name="enable_multidevice">Включить multi-device режим</string>
+    <string name="scan_devices">Сканировать устройства</string>
+    <string name="connect">Подключить</string>
+    <string name="disconnect">Отключить</string>
+    <string name="no_devices">Устройства не найдены</string>
+    <string name="peer_confidence">Уверенность: %.2f</string>
+    
+    <!-- Settings -->
+    <string name="settings">Настройки</string>
+    <string name="map_management">Управление картой</string>
+    <string name="download_map">Загрузить карту</string>
+    <string name="delete_map">Удалить карту</string>
+    <string name="map_size">Размер карты</string>
+    <string name="sensor_calibration">Калибровка датчиков</string>
+    <string name="calibrate">Калибровать</string>
+    <string name="spoofing_detection">Детекция спуффинга</string>
+    <string name="sensitivity">Чувствительность</string>
+    <string name="peer_sync">P2P синхронизация</string>
+    <string name="mock_location_settings">Mock Location Provider</string>
+    <string name="about">О приложении</string>
+    <string name="version">Версия</string>
+    <string name="license">Лицензия</string>
+    <string name="gpl_v3">GNU GPL v3</string>
+    
+    <!-- Diagnostics -->
+    <string name="diagnostics">Диагностика</string>
+    <string name="sensor_data">Данные датчиков</string>
+    <string name="accelerometer">Акселерометр</string>
+    <string name="gyroscope">Гироскоп</string>
+    <string name="magnetometer">Магнитометр</string>
+    <string name="drift_graph">График дрейфа</string>
+    <string name="correction_history">История коррекций</string>
+    <string name="event_log">Лог событий</string>
+    
+    <!-- Navigation -->
+    <string name="map">Карта</string>
+    <string name="peers">Устройства</string>
+    <string name="diagnostics_nav">Диагностика</string>
+    
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Отмена</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="error">Ошибка</string>
+    <string name="permission_denied">Разрешение отклонено</string>
+    <string name="downloading">Загрузка…</string>
+    <string name="loading">Загрузка…</string>
+</resources>
