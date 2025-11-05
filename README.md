@@ -7,7 +7,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-green.svg)](https://www.android.com)
 [![Language](https://img.shields.io/badge/language-Java-orange.svg)](https://www.java.com)
-[![Version](https://img.shields.io/badge/version-0.0--dev1-orange.svg)](https://github.com/VovaplusEXP/GPS-Controller)
+[![Version](https://img.shields.io/badge/version-0.1.0-brightgreen.svg)](https://github.com/VovaplusEXP/GPS-Controller)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/VovaplusEXP/GPS-Controller/actions)
 
 </div>
@@ -310,6 +310,9 @@ app/src/main/java/com/vovaplusexp/gpscontroller/
 - **OkHttp:** 4.12.0 (загрузка карт)
 - **MPAndroidChart:** 3.1.0 (графики)
 - **Timber:** 5.0.1 (логирование)
+- **OSM4J Core:** 0.1.5 (парсинг OSM)
+- **OSM4J PBF:** 0.1.1 (формат PBF)
+- **Protobuf Java:** 3.21.12 (Protocol Buffers)
 
 ## 📝 Лицензия
 
