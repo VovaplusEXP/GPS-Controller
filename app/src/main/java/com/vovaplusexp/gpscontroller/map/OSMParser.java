@@ -11,23 +11,46 @@ package com.vovaplusexp.gpscontroller.map;
 
 import timber.log.Timber;
 import java.io.File;
+import java.io.FileInputStream;
+import de.topobyte.osm4j.core.access.OsmIterator;
+import de.topobyte.osm4j.core.model.iface.OsmNode;
+import de.topobyte.osm4j.core.model.iface.OsmWay;
+import de.topobyte.osm4j.core.model.iface.OsmTag;
+import de.topobyte.osm4j.pbf.seq.PbfIterator;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Parses OSM PBF files and extracts road data
  * 
- * This implementation provides a sample road network generator for testing
- * and development purposes.
+ * This implementation provides a simplified OSM parser that extracts
+ * road segments from .osm.pbf files and populates the road database.
  * 
- * Note: Real OSM PBF parsing requires additional libraries that are not
- * currently available in standard Maven repositories. For now, this
- * implementation generates a sample road network. Future versions will
- * include actual OSM parsing when appropriate libraries are available.
+ * Note: For production use, consider using a dedicated OSM library like
+ * osmosis or osm4j for better performance and PBF format support.
  */
 public class OSMParser {
     
     private final RoadDatabase roadDatabase;
     private ParserListener listener;
     private boolean isCancelled = false;
+    
+    // Node cache for coordinate lookups
+    private final Map<Long, NodeData> nodeCache = new HashMap<>();
+    private static final int NODE_CACHE_SIZE = 100000;
+    
+    /**
+     * Internal class to store node coordinates
+     */
+    private static class NodeData {
+        double lat;
+        double lon;
+        
+        NodeData(double lat, double lon) {
+            this.lat = lat;
+            this.lon = lon;
+        }
+    }
     
     public interface ParserListener {
         void onProgress(int percent);
@@ -46,48 +69,42 @@ public class OSMParser {
     /**
      * Parse OSM file and populate database
      * 
-     * This implementation generates a sample road network for testing.
-     * Real OSM PBF parsing will be added in future versions when
-     * appropriate libraries become available in standard repositories.
+     * This implementation supports real OSM PBF file parsing with fallback
+     * to sample network generation for non-PBF files.
      */
     public void parseFile(File osmFile) {
         isCancelled = false;
         
         new Thread(() -> {
             try {
-                Timber.i("Processing map file: %s", osmFile.getAbsolutePath());
+                Timber.i("Parsing OSM file: %s", osmFile.getAbsolutePath());
                 
                 if (!osmFile.exists()) {
-                    notifyError("File not found");
+                    notifyError("OSM file not found");
                     return;
                 }
                 
                 long fileSize = osmFile.length();
-                Timber.i("File size: %d bytes", fileSize);
+                Timber.i("OSM file size: %d bytes", fileSize);
                 
-                // Generate sample road network
-                // Note: Real OSM parsing temporarily disabled due to library availability
-                Timber.i("Generating sample road network");
-                int roadCount = generateSampleRoadNetwork();
+                // Clear node cache
+                nodeCache.clear();
                 
-                // Simulate parsing progress
-                for (int i = 0; i <= 100; i += 10) {
-                    if (isCancelled) {
-                        notifyError("Operation cancelled");
-                        return;
-                    }
-                    
-                    Thread.sleep(200);
-                    notifyProgress(i);
+                int roadCount = 0;
+                
+                // Check file extension
+                if (osmFile.getName().endsWith(".osm.pbf")) {
+                    roadCount = parsePbfFile(osmFile, fileSize);
+                } else {
+                    // Fallback: generate sample network
+                    Timber.w("Not a PBF file, generating sample network");
+                    roadCount = generateSampleRoadNetwork();
                 }
                 
                 notifyComplete(roadCount);
                 
-            } catch (InterruptedException e) {
-                Timber.w(e, "Operation interrupted");
-                notifyError("Operation interrupted");
             } catch (Exception e) {
-                Timber.e(e, "Error processing map file");
+                Timber.e(e, "Error parsing OSM file");
                 notifyError(e.getMessage());
             }
         }).start();
@@ -98,6 +115,170 @@ public class OSMParser {
      */
     public void cancel() {
         isCancelled = true;
+        nodeCache.clear();
+    }
+    
+    /**
+     * Parse PBF file with real OSM data
+     * 
+     * @param osmFile OSM PBF file to parse
+     * @param fileSize Size of the file for progress tracking
+     * @return Number of road segments created
+     */
+    private int parsePbfFile(File osmFile, long fileSize) throws Exception {
+        int roadCount = 0;
+        long bytesRead = 0;
+        int lastProgress = 0;
+        
+        // First pass: collect node coordinates
+        Timber.i("First pass: collecting nodes");
+        try (FileInputStream input = new FileInputStream(osmFile)) {
+            OsmIterator iterator = new PbfIterator(input, true);
+            
+            while (iterator.hasNext()) {
+                if (isCancelled) {
+                    notifyError("Parsing cancelled");
+                    return 0;
+                }
+                
+                Object entity = iterator.next();
+                
+                if (entity instanceof OsmNode) {
+                    OsmNode node = (OsmNode) entity;
+                    
+                    // Limit cache size
+                    if (nodeCache.size() < NODE_CACHE_SIZE) {
+                        nodeCache.put(
+                            node.getId(),
+                            new NodeData(node.getLatitude(), node.getLongitude())
+                        );
+                    }
+                }
+                
+                // Update progress (0-50%)
+                bytesRead = input.getChannel().position();
+                int progress = (int) ((bytesRead * 50) / fileSize);
+                if (progress != lastProgress) {
+                    notifyProgress(progress);
+                    lastProgress = progress;
+                }
+            }
+        }
+        
+        Timber.i("Collected %d nodes", nodeCache.size());
+        
+        // Second pass: process roads
+        Timber.i("Second pass: processing roads");
+        try (FileInputStream input = new FileInputStream(osmFile)) {
+            OsmIterator iterator = new PbfIterator(input, true);
+            bytesRead = 0;
+            lastProgress = 50;
+            
+            while (iterator.hasNext()) {
+                if (isCancelled) {
+                    notifyError("Parsing cancelled");
+                    return 0;
+                }
+                
+                Object entity = iterator.next();
+                
+                if (entity instanceof OsmWay) {
+                    OsmWay way = (OsmWay) entity;
+                    
+                    // Check if this is a road
+                    if (isHighway(way)) {
+                        int segments = processRoadWay(way);
+                        roadCount += segments;
+                    }
+                }
+                
+                // Update progress (50-100%)
+                bytesRead = input.getChannel().position();
+                int progress = 50 + (int) ((bytesRead * 50) / fileSize);
+                if (progress != lastProgress) {
+                    notifyProgress(progress);
+                    lastProgress = progress;
+                }
+            }
+        }
+        
+        Timber.i("Processed %d road segments", roadCount);
+        
+        return roadCount;
+    }
+    
+    /**
+     * Check if a way is a highway/road
+     * 
+     * @param way OSM way to check
+     * @return true if the way is a road
+     */
+    private boolean isHighway(OsmWay way) {
+        for (int i = 0; i < way.getNumberOfTags(); i++) {
+            OsmTag tag = way.getTag(i);
+            
+            if (tag.getKey().equals("highway")) {
+                String value = tag.getValue();
+                
+                // Filter roads (exclude pedestrian, etc.)
+                return value.equals("motorway") ||
+                       value.equals("trunk") ||
+                       value.equals("primary") ||
+                       value.equals("secondary") ||
+                       value.equals("tertiary") ||
+                       value.equals("residential") ||
+                       value.equals("unclassified") ||
+                       value.equals("service") ||
+                       value.equals("motorway_link") ||
+                       value.equals("trunk_link") ||
+                       value.equals("primary_link") ||
+                       value.equals("secondary_link");
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Process a road way and extract segments
+     * 
+     * @param way OSM way representing a road
+     * @return Number of segments created
+     */
+    private int processRoadWay(OsmWay way) {
+        int segmentCount = 0;
+        int nodeCount = way.getNumberOfNodes();
+        
+        if (nodeCount < 2) {
+            return 0;
+        }
+        
+        double[] lats = new double[nodeCount];
+        double[] lons = new double[nodeCount];
+        int validNodes = 0;
+        
+        // Get node coordinates from cache
+        for (int i = 0; i < nodeCount; i++) {
+            long nodeId = way.getNodeId(i);
+            NodeData node = nodeCache.get(nodeId);
+            
+            if (node != null) {
+                lats[validNodes] = node.lat;
+                lons[validNodes] = node.lon;
+                validNodes++;
+            }
+        }
+        
+        // Create segments between consecutive nodes
+        for (int i = 0; i < validNodes - 1; i++) {
+            roadDatabase.insertRoadSegment(
+                lats[i], lons[i],
+                lats[i + 1], lons[i + 1]
+            );
+            segmentCount++;
+        }
+        
+        return segmentCount;
     }
     
     /**
