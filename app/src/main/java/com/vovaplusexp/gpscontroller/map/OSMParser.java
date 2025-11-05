@@ -130,80 +130,78 @@ public class OSMParser {
         long bytesRead = 0;
         int lastProgress = 0;
         
-        FileInputStream input = new FileInputStream(osmFile);
-        OsmIterator iterator = new PbfIterator(input, true);
-        
         // First pass: collect node coordinates
         Timber.i("First pass: collecting nodes");
-        while (iterator.hasNext()) {
-            if (isCancelled) {
-                input.close();
-                notifyError("Parsing cancelled");
-                return 0;
-            }
+        try (FileInputStream input = new FileInputStream(osmFile)) {
+            OsmIterator iterator = new PbfIterator(input, true);
             
-            var entity = iterator.next();
-            
-            if (entity instanceof OsmNode) {
-                OsmNode node = (OsmNode) entity;
-                
-                // Limit cache size
-                if (nodeCache.size() < NODE_CACHE_SIZE) {
-                    nodeCache.put(
-                        node.getId(),
-                        new NodeData(node.getLatitude(), node.getLongitude())
-                    );
+            while (iterator.hasNext()) {
+                if (isCancelled) {
+                    notifyError("Parsing cancelled");
+                    return 0;
                 }
-            }
-            
-            // Update progress (0-50%)
-            bytesRead = input.getChannel().position();
-            int progress = (int) ((bytesRead * 50) / fileSize);
-            if (progress != lastProgress) {
-                notifyProgress(progress);
-                lastProgress = progress;
+                
+                Object entity = iterator.next();
+                
+                if (entity instanceof OsmNode) {
+                    OsmNode node = (OsmNode) entity;
+                    
+                    // Limit cache size
+                    if (nodeCache.size() < NODE_CACHE_SIZE) {
+                        nodeCache.put(
+                            node.getId(),
+                            new NodeData(node.getLatitude(), node.getLongitude())
+                        );
+                    }
+                }
+                
+                // Update progress (0-50%)
+                bytesRead = input.getChannel().position();
+                int progress = (int) ((bytesRead * 50) / fileSize);
+                if (progress != lastProgress) {
+                    notifyProgress(progress);
+                    lastProgress = progress;
+                }
             }
         }
         
-        input.close();
         Timber.i("Collected %d nodes", nodeCache.size());
         
         // Second pass: process roads
         Timber.i("Second pass: processing roads");
-        input = new FileInputStream(osmFile);
-        iterator = new PbfIterator(input, true);
-        bytesRead = 0;
-        lastProgress = 50;
-        
-        while (iterator.hasNext()) {
-            if (isCancelled) {
-                input.close();
-                notifyError("Parsing cancelled");
-                return 0;
-            }
+        try (FileInputStream input = new FileInputStream(osmFile)) {
+            OsmIterator iterator = new PbfIterator(input, true);
+            bytesRead = 0;
+            lastProgress = 50;
             
-            var entity = iterator.next();
-            
-            if (entity instanceof OsmWay) {
-                OsmWay way = (OsmWay) entity;
-                
-                // Check if this is a road
-                if (isHighway(way)) {
-                    int segments = processRoadWay(way);
-                    roadCount += segments;
+            while (iterator.hasNext()) {
+                if (isCancelled) {
+                    notifyError("Parsing cancelled");
+                    return 0;
                 }
-            }
-            
-            // Update progress (50-100%)
-            bytesRead = input.getChannel().position();
-            int progress = 50 + (int) ((bytesRead * 50) / fileSize);
-            if (progress != lastProgress) {
-                notifyProgress(progress);
-                lastProgress = progress;
+                
+                Object entity = iterator.next();
+                
+                if (entity instanceof OsmWay) {
+                    OsmWay way = (OsmWay) entity;
+                    
+                    // Check if this is a road
+                    if (isHighway(way)) {
+                        int segments = processRoadWay(way);
+                        roadCount += segments;
+                    }
+                }
+                
+                // Update progress (50-100%)
+                bytesRead = input.getChannel().position();
+                int progress = 50 + (int) ((bytesRead * 50) / fileSize);
+                if (progress != lastProgress) {
+                    notifyProgress(progress);
+                    lastProgress = progress;
+                }
             }
         }
         
-        input.close();
         Timber.i("Processed %d road segments", roadCount);
         
         return roadCount;

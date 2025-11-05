@@ -423,7 +423,13 @@ public class BluetoothManager {
                 }
                 
                 if (listener != null) {
-                    listener.onError("Connection failed: " + device.getName());
+                    String deviceName = "Unknown";
+                    try {
+                        deviceName = device.getName();
+                    } catch (SecurityException e) {
+                        Timber.e(e, "Cannot get device name");
+                    }
+                    listener.onError("Connection failed: " + deviceName);
                 }
                 return;
             }
@@ -469,13 +475,23 @@ public class BluetoothManager {
         
         public void run() {
             byte[] buffer = new byte[PeerSyncProtocol.PACKET_SIZE];
+            int bytesRead = 0;
             
             while (true) {
                 try {
-                    // Read data (blocking)
-                    int bytes = inputStream.read(buffer);
+                    // Read data (blocking) - accumulate until we have a full packet
+                    int bytes = inputStream.read(buffer, bytesRead, PeerSyncProtocol.PACKET_SIZE - bytesRead);
                     
-                    if (bytes == PeerSyncProtocol.PACKET_SIZE) {
+                    if (bytes == -1) {
+                        // End of stream
+                        Timber.w("End of stream reached");
+                        connectionLost(deviceId);
+                        break;
+                    }
+                    
+                    bytesRead += bytes;
+                    
+                    if (bytesRead == PeerSyncProtocol.PACKET_SIZE) {
                         // Complete packet received
                         byte[] packet = new byte[PeerSyncProtocol.PACKET_SIZE];
                         System.arraycopy(buffer, 0, packet, 0, PeerSyncProtocol.PACKET_SIZE);
@@ -485,6 +501,9 @@ public class BluetoothManager {
                         if (device != null && listener != null) {
                             listener.onDataReceived(device, packet);
                         }
+                        
+                        // Reset for next packet
+                        bytesRead = 0;
                     }
                 } catch (IOException e) {
                     Timber.e(e, "Connection lost");
