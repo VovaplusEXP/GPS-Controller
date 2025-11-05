@@ -7,6 +7,8 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-green.svg)](https://www.android.com)
 [![Language](https://img.shields.io/badge/language-Java-orange.svg)](https://www.java.com)
+[![Version](https://img.shields.io/badge/version-0.0--dev1-orange.svg)](https://github.com/VovaplusEXP/GPS-Controller)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/VovaplusEXP/GPS-Controller/actions)
 
 </div>
 
@@ -238,6 +240,22 @@ cd GPS-Controller
 # Сборка release версии
 ./gradlew assembleRelease
 ```
+
+### Автоматическая сборка (CI/CD)
+
+Проект настроен с GitHub Actions для автоматической сборки APK при каждом коммите:
+
+- ✅ Автоматическая проверка компиляции
+- ✅ Сборка Debug и Release APK
+- ✅ Артефакты доступны для скачивания (хранятся 30 дней)
+- ⚠️ **Теги создаются вручную** - автосборка не создаёт релизы
+
+**Доступ к собранным APK:**
+1. Перейдите в раздел **Actions** на GitHub
+2. Выберите нужный workflow run
+3. Скачайте APK из секции **Artifacts**
+
+См. подробности в [.github/workflows/README.md](.github/workflows/README.md)
 
 ### Структура проекта
 
