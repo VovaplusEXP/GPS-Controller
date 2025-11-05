@@ -9,7 +9,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 1
-        versionName "0.0-dev1"
+        versionName "0.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -23,6 +23,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    packagingOptions {
+        resources {
+            excludes += ['google/protobuf/*.proto']
+        }
     }
 }
 
@@ -46,7 +52,9 @@ dependencies {
     implementation 'org.osmdroid:osmdroid-android:6.1.17'
     
     // Google Play Services for Location
-    implementation 'com.google.android.gms:play-services-location:21.1.0'
+    implementation('com.google.android.gms:play-services-location:21.1.0') {
+        exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
+    }
     
     // Network & Download
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
@@ -57,8 +65,17 @@ dependencies {
     // Logging
     implementation 'com.jakewharton.timber:timber:5.0.1'
     
+    // OSM parsing
+    implementation 'de.topobyte:osm4j-core:1.4.1'
+    implementation 'de.topobyte:osm4j-pbf:1.4.1'
+    implementation 'com.google.protobuf:protobuf-java:3.21.12'
+    
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+configurations.all {
+    exclude group: 'com.google.protobuf', module: 'protobuf-javalite'
 }

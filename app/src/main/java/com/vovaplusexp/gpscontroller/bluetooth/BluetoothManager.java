@@ -11,11 +11,19 @@ package com.vovaplusexp.gpscontroller.bluetooth;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import timber.log.Timber;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Manages Bluetooth connections for P2P sync
@@ -33,6 +41,12 @@ public class BluetoothManager {
     private final List<PeerDevice> discoveredDevices = new ArrayList<>();
     private BluetoothListener listener;
     private boolean isDiscovering = false;
+    
+    // Socket management fields
+    private BluetoothServerSocket serverSocket;
+    private final Map<String, BluetoothSocket> activeSockets = new HashMap<>();
+    private final Map<String, Thread> readThreads = new HashMap<>();
+    private AcceptThread acceptThread;
     
     public interface BluetoothListener {
         void onDeviceDiscovered(PeerDevice device);
@@ -136,8 +150,6 @@ public class BluetoothManager {
     
     /**
      * Connect to a peer device
-     * Note: Full socket implementation would require background threads
-     * and proper connection handling. This provides the framework.
      */
     public void connectToDevice(PeerDevice device) {
         if (device.isConnected()) {
@@ -145,14 +157,21 @@ public class BluetoothManager {
             return;
         }
         
-        Timber.i("Connecting to device: %s", device.getDeviceName());
-        
-        // Mark as connected (in full implementation, this would happen after
-        // successful socket connection)
-        device.setConnected(true);
-        
-        if (listener != null) {
-            listener.onDeviceConnected(device);
+        // Get BluetoothDevice
+        try {
+            BluetoothDevice btDevice = bluetoothAdapter.getRemoteDevice(
+                device.getBluetoothAddress()
+            );
+            
+            // Start connection in separate thread
+            ConnectThread connectThread = new ConnectThread(btDevice);
+            connectThread.start();
+            
+        } catch (IllegalArgumentException | SecurityException e) {
+            Timber.e(e, "Invalid device address");
+            if (listener != null) {
+                listener.onError("Cannot connect to device");
+            }
         }
     }
     
@@ -160,17 +179,35 @@ public class BluetoothManager {
      * Disconnect from a peer device
      */
     public void disconnectFromDevice(PeerDevice device) {
-        // Close socket and cleanup
-        Timber.i("Disconnecting from device: %s", device.getDeviceName());
+        String address = device.getBluetoothAddress();
+        
+        // Close read thread
+        Thread thread = readThreads.remove(address);
+        if (thread instanceof ConnectedThread) {
+            ((ConnectedThread) thread).cancel();
+        }
+        
+        // Close socket
+        BluetoothSocket socket = activeSockets.remove(address);
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                Timber.e(e, "Error closing socket");
+            }
+        }
+        
         device.setConnected(false);
+        
         if (listener != null) {
             listener.onDeviceDisconnected(device);
         }
+        
+        Timber.i("Disconnected from device: %s", device.getDeviceName());
     }
     
     /**
      * Send data to a peer device
-     * Note: In full implementation, this would write to BluetoothSocket OutputStream
      */
     public void sendData(PeerDevice device, byte[] data) {
         if (!device.isConnected()) {
@@ -178,19 +215,118 @@ public class BluetoothManager {
             return;
         }
         
-        // In full implementation, write to socket output stream
-        // For now, just log and update device timestamp
-        device.updateLastSeen();
-        Timber.d("Sending %d bytes to %s", data.length, device.getDeviceName());
+        String address = device.getBluetoothAddress();
+        Thread thread = readThreads.get(address);
+        
+        if (thread instanceof ConnectedThread) {
+            ((ConnectedThread) thread).write(data);
+            device.updateLastSeen();
+        } else {
+            Timber.w("No connection thread for device: %s", device.getDeviceName());
+        }
     }
     
     /**
-     * Simulate receiving data (for testing/demonstration)
-     * In full implementation, this would be called by socket read thread
+     * Manage connected socket
      */
-    public void simulateDataReceived(PeerDevice device, byte[] data) {
-        if (listener != null) {
-            listener.onDataReceived(device, data);
+    private synchronized void manageConnectedSocket(BluetoothSocket socket) {
+        try {
+            BluetoothDevice device = socket.getRemoteDevice();
+            String address = device.getAddress();
+            
+            // Save socket
+            activeSockets.put(address, socket);
+            
+            // Create PeerDevice if doesn't exist
+            PeerDevice peerDevice = findDeviceByAddress(address);
+            if (peerDevice == null) {
+                peerDevice = new PeerDevice(
+                    address,
+                    device.getName() != null ? device.getName() : "Unknown",
+                    address
+                );
+                discoveredDevices.add(peerDevice);
+            }
+            
+            peerDevice.setConnected(true);
+            
+            // Start read thread
+            ConnectedThread connectedThread = new ConnectedThread(socket, address);
+            readThreads.put(address, connectedThread);
+            connectedThread.start();
+            
+            // Notify listener
+            if (listener != null) {
+                listener.onDeviceConnected(peerDevice);
+            }
+            
+        } catch (SecurityException e) {
+            Timber.e(e, "Security exception in manageConnectedSocket");
+        }
+    }
+    
+    /**
+     * Find device by ID
+     */
+    private PeerDevice findDeviceById(String deviceId) {
+        for (PeerDevice device : discoveredDevices) {
+            if (device.getDeviceId().equals(deviceId)) {
+                return device;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find device by Bluetooth address
+     */
+    private PeerDevice findDeviceByAddress(String address) {
+        for (PeerDevice device : discoveredDevices) {
+            if (device.getBluetoothAddress().equals(address)) {
+                return device;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Handle connection loss
+     */
+    private void connectionLost(String deviceId) {
+        PeerDevice device = findDeviceById(deviceId);
+        if (device != null) {
+            device.setConnected(false);
+            activeSockets.remove(device.getBluetoothAddress());
+            readThreads.remove(device.getBluetoothAddress());
+            
+            if (listener != null) {
+                listener.onDeviceDisconnected(device);
+            }
+        }
+    }
+    
+    /**
+     * Start Bluetooth server for incoming connections
+     */
+    public void startServer() {
+        if (acceptThread != null) {
+            Timber.w("Server already running");
+            return;
+        }
+        
+        acceptThread = new AcceptThread();
+        acceptThread.start();
+        Timber.i("Bluetooth server started");
+    }
+    
+    /**
+     * Stop Bluetooth server
+     */
+    public void stopServer() {
+        if (acceptThread != null) {
+            acceptThread.cancel();
+            acceptThread = null;
+            Timber.i("Bluetooth server stopped");
         }
     }
     
@@ -202,16 +338,222 @@ public class BluetoothManager {
     }
     
     /**
+     * AcceptThread - Server mode for incoming connections
+     */
+    private class AcceptThread extends Thread {
+        private final BluetoothServerSocket serverSocket;
+        
+        AcceptThread() {
+            BluetoothServerSocket tmp = null;
+            try {
+                // Create server socket with UUID
+                tmp = bluetoothAdapter.listenUsingRfcommWithServiceRecord(
+                    APP_NAME, UUID.fromString(SERVICE_UUID)
+                );
+            } catch (IOException | SecurityException e) {
+                Timber.e(e, "Socket's listen() method failed");
+            }
+            serverSocket = tmp;
+        }
+        
+        public void run() {
+            BluetoothSocket socket;
+            while (true) {
+                try {
+                    socket = serverSocket.accept();
+                } catch (IOException e) {
+                    Timber.e(e, "Socket's accept() method failed");
+                    break;
+                }
+                
+                if (socket != null) {
+                    // Connection established
+                    manageConnectedSocket(socket);
+                }
+            }
+        }
+        
+        public void cancel() {
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                Timber.e(e, "Could not close the connect socket");
+            }
+        }
+    }
+    
+    /**
+     * ConnectThread - Client mode for outgoing connections
+     */
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket socket;
+        private final BluetoothDevice device;
+        
+        ConnectThread(BluetoothDevice device) {
+            this.device = device;
+            BluetoothSocket tmp = null;
+            
+            try {
+                // Create socket for connection
+                tmp = device.createRfcommSocketToServiceRecord(
+                    UUID.fromString(SERVICE_UUID)
+                );
+            } catch (IOException | SecurityException e) {
+                Timber.e(e, "Socket's create() method failed");
+            }
+            socket = tmp;
+        }
+        
+        public void run() {
+            // Stop discovery to speed up connection
+            try {
+                bluetoothAdapter.cancelDiscovery();
+            } catch (SecurityException e) {
+                Timber.e(e, "Cannot cancel discovery");
+            }
+            
+            try {
+                // Connect (blocking call)
+                socket.connect();
+            } catch (IOException | SecurityException connectException) {
+                try {
+                    socket.close();
+                } catch (IOException closeException) {
+                    Timber.e(closeException, "Could not close socket");
+                }
+                
+                if (listener != null) {
+                    String deviceName = "Unknown";
+                    try {
+                        deviceName = device.getName();
+                    } catch (SecurityException e) {
+                        Timber.e(e, "Cannot get device name");
+                    }
+                    listener.onError("Connection failed: " + deviceName);
+                }
+                return;
+            }
+            
+            // Connection established
+            manageConnectedSocket(socket);
+        }
+        
+        public void cancel() {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                Timber.e(e, "Could not close socket");
+            }
+        }
+    }
+    
+    /**
+     * ConnectedThread - Data exchange thread
+     */
+    private class ConnectedThread extends Thread {
+        private final BluetoothSocket socket;
+        private final InputStream inputStream;
+        private final OutputStream outputStream;
+        private final String deviceId;
+        
+        ConnectedThread(BluetoothSocket socket, String deviceId) {
+            this.socket = socket;
+            this.deviceId = deviceId;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+            
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e) {
+                Timber.e(e, "Error getting socket streams");
+            }
+            
+            inputStream = tmpIn;
+            outputStream = tmpOut;
+        }
+        
+        public void run() {
+            byte[] buffer = new byte[PeerSyncProtocol.PACKET_SIZE];
+            int bytesRead = 0;
+            
+            while (true) {
+                try {
+                    // Read data (blocking) - accumulate until we have a full packet
+                    int bytes = inputStream.read(buffer, bytesRead, PeerSyncProtocol.PACKET_SIZE - bytesRead);
+                    
+                    if (bytes == -1) {
+                        // End of stream
+                        Timber.w("End of stream reached");
+                        connectionLost(deviceId);
+                        break;
+                    }
+                    
+                    bytesRead += bytes;
+                    
+                    if (bytesRead == PeerSyncProtocol.PACKET_SIZE) {
+                        // Complete packet received
+                        byte[] packet = new byte[PeerSyncProtocol.PACKET_SIZE];
+                        System.arraycopy(buffer, 0, packet, 0, PeerSyncProtocol.PACKET_SIZE);
+                        
+                        // Find PeerDevice by deviceId
+                        PeerDevice device = findDeviceById(deviceId);
+                        if (device != null && listener != null) {
+                            listener.onDataReceived(device, packet);
+                        }
+                        
+                        // Reset for next packet
+                        bytesRead = 0;
+                    }
+                } catch (IOException e) {
+                    Timber.e(e, "Connection lost");
+                    connectionLost(deviceId);
+                    break;
+                }
+            }
+        }
+        
+        public void write(byte[] bytes) {
+            try {
+                outputStream.write(bytes);
+                outputStream.flush();
+            } catch (IOException e) {
+                Timber.e(e, "Error writing to stream");
+            }
+        }
+        
+        public void cancel() {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                Timber.e(e, "Could not close socket");
+            }
+        }
+    }
+    
+    /**
      * Cleanup and release resources
      */
     public void cleanup() {
         stopDiscovery();
+        stopServer();
+        
         // Close all connections
         for (PeerDevice device : discoveredDevices) {
             if (device.isConnected()) {
                 disconnectFromDevice(device);
             }
         }
+        
+        // Close all threads
+        for (Thread thread : readThreads.values()) {
+            if (thread instanceof ConnectedThread) {
+                ((ConnectedThread) thread).cancel();
+            }
+        }
+        
+        activeSockets.clear();
+        readThreads.clear();
         discoveredDevices.clear();
     }
 }

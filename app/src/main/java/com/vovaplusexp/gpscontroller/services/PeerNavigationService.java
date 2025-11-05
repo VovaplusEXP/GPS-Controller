@@ -79,6 +79,12 @@ public class PeerNavigationService extends Service {
             }
         });
         
+        // Start server for incoming connections
+        if (bluetoothManager.isBluetoothAvailable()) {
+            bluetoothManager.startServer();
+            Timber.i("Bluetooth server started for P2P");
+        }
+        
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, createNotification());
     }
@@ -177,6 +183,7 @@ public class PeerNavigationService extends Service {
     public void onDestroy() {
         super.onDestroy();
         if (bluetoothManager != null) {
+            bluetoothManager.stopServer();
             bluetoothManager.cleanup();
         }
         Timber.i("PeerNavigationService destroyed");

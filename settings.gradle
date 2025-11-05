@@ -11,6 +11,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
+        maven { url 'https://mvn.topobyte.de' }
+        maven { url 'https://mvn.slimjars.com' }
     }
 }
 rootProject.name = "GPS-Controller"
