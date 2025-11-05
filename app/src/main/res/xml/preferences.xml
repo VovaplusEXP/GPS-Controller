@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/map_management">
+
+        <Preference
+            android:key="download_map"
+            android:title="@string/download_map"
+            android:summary="@string/map_size"/>
+
+        <Preference
+            android:key="delete_map"
+            android:title="@string/delete_map"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/sensor_calibration">
+
+        <Preference
+            android:key="calibrate_sensors"
+            android:title="@string/calibrate"
+            android:summary="@string/sensor_calibration"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/spoofing_detection">
+
+        <SeekBarPreference
+            android:key="spoofing_sensitivity"
+            android:title="@string/sensitivity"
+            android:defaultValue="50"
+            android:max="100"
+            app:showSeekBarValue="true"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/peer_sync">
+
+        <SwitchPreferenceCompat
+            android:key="peer_enabled"
+            android:title="@string/enable_multidevice"
+            android:defaultValue="false"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mock_location_settings">
+
+        <SwitchPreferenceCompat
+            android:key="mock_location_enabled"
+            android:title="Mock Location Provider"
+            android:defaultValue="true"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/about">
+
+        <Preference
+            android:key="version"
+            android:title="@string/version"
+            android:summary="1.0"/>
+
+        <Preference
+            android:key="license"
+            android:title="@string/license"
+            android:summary="@string/gpl_v3"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

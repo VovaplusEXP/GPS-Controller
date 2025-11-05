@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <item
+        android:id="@+id/nav_map"
+        android:icon="@android:drawable/ic_dialog_map"
+        android:title="@string/map"/>
+    
+    <item
+        android:id="@+id/nav_peers"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="@string/peers"/>
+    
+    <item
+        android:id="@+id/nav_diagnostics"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="@string/diagnostics_nav"/>
+        
+</menu>
