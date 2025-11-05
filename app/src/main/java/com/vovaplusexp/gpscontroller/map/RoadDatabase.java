@@ -138,6 +138,11 @@ public class RoadDatabase extends SQLiteOpenHelper {
      */
     public long getDatabaseSize() {
         SQLiteDatabase db = getReadableDatabase();
-        return db.getPageSize() * db.getPageCount();
+        String path = db.getPath();
+        if (path != null) {
+            java.io.File dbFile = new java.io.File(path);
+            return dbFile.length();
+        }
+        return 0;
     }
 }
