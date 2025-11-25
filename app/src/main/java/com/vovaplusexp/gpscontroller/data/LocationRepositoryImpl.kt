@@ -7,7 +7,7 @@ import android.os.Bundle
 import com.vovaplusexp.gpscontroller.models.Location
 import com.vovaplusexp.gpscontroller.services.NavigationServiceManager
 import com.vovaplusexp.gpscontroller.spoofing.GpsSpoofingDetector
-import com.vovaplusexp.gpscontroller.spoofing.LocationTrustAnalyzer
+import com.vovaplusexp.gpscontroller.spoofing.LocationTrust
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -86,18 +86,18 @@ class LocationRepositoryImpl @Inject constructor(
         val trust = spoofingDetector.analyzeLocation(location, imuSpeed, imuBearing)
 
         when (trust.trustLevel) {
-            LocationTrustAnalyzer.TrustLevel.TRUSTED -> {
+            LocationTrust.TrustLevel.TRUSTED -> {
                 isSpoofing = false
                 _statusFlow.value = "GPS: Normal"
                 updateFinalLocation(location)
                 serviceManager.initializeInertialLocation(location)
             }
-            LocationTrustAnalyzer.TrustLevel.SUSPICIOUS -> {
+            LocationTrust.TrustLevel.SUSPICIOUS -> {
                 isSpoofing = false
                 _statusFlow.value = "GPS: Suspicious - ${trust.description}"
                 updateFinalLocation(location)
             }
-            LocationTrustAnalyzer.TrustLevel.SPOOFED -> {
+            LocationTrust.TrustLevel.SPOOFED -> {
                 isSpoofing = true
                 _statusFlow.value = "GPS: SPOOFED! ${trust.description}"
                 // Don't update from GPS, rely on inertial flow

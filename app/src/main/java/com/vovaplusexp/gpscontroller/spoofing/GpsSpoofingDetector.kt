@@ -14,7 +14,7 @@ class GpsSpoofingDetector @Inject constructor() {
         currentLocation: Location,
         imuSpeed: Float,
         imuBearing: Float
-    ): LocationTrustAnalyzer.LocationTrust {
+    ): LocationTrust {
         val currentFlags = mutableListOf<SpoofingFlag>()
 
         if (currentLocation.isFromMockProvider) {
@@ -52,23 +52,23 @@ class GpsSpoofingDetector @Inject constructor() {
         lastGpsLocation = currentLocation
 
         val trustLevel = when {
-            currentFlags.size >= 3 -> LocationTrustAnalyzer.TrustLevel.SPOOFED
-            currentFlags.isNotEmpty() -> LocationTrustAnalyzer.TrustLevel.SUSPICIOUS
-            else -> LocationTrustAnalyzer.TrustLevel.TRUSTED
+            currentFlags.size >= 3 -> LocationTrust.TrustLevel.SPOOFED
+            currentFlags.isNotEmpty() -> LocationTrust.TrustLevel.SUSPICIOUS
+            else -> LocationTrust.TrustLevel.TRUSTED
         }
 
-        return LocationTrustAnalyzer.LocationTrust(
+        return LocationTrust(
             trustLevel,
             currentFlags.toList(),
             calculateConfidence(trustLevel)
         )
     }
 
-    private fun calculateConfidence(trustLevel: LocationTrustAnalyzer.TrustLevel): Float {
+    private fun calculateConfidence(trustLevel: LocationTrust.TrustLevel): Float {
         return when (trustLevel) {
-            LocationTrustAnalyzer.TrustLevel.TRUSTED -> 1.0f
-            LocationTrustAnalyzer.TrustLevel.SUSPICIOUS -> 0.5f
-            LocationTrustAnalyzer.TrustLevel.SPOOFED -> 0.0f
+            LocationTrust.TrustLevel.TRUSTED -> 1.0f
+            LocationTrust.TrustLevel.SUSPICIOUS -> 0.5f
+            LocationTrust.TrustLevel.SPOOFED -> 0.0f
         }
     }
 

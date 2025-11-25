@@ -1,6 +1,6 @@
 package com.vovaplusexp.gpscontroller.spoofing
 
-data class LocationTrustAnalyzer(
+data class LocationTrust(
     val trustLevel: TrustLevel,
     val flags: List<GpsSpoofingDetector.SpoofingFlag>,
     val confidence: Float
