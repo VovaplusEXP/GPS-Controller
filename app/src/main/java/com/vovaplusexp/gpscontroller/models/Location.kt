@@ -3,17 +3,27 @@ package com.vovaplusexp.gpscontroller.models
 import android.location.Location as AndroidLocation
 
 data class Location(
-    var latitude: Double,
-    var longitude: Double,
-    var speed: Float,
-    var bearing: Float,
-    var timestamp: Long,
-    var source: LocationSource,
-    var confidence: Float,
-    var altitude: Float = 0f,
-    var isFromMockProvider: Boolean = false,
-    var provider: String? = null
+    @JvmField var latitude: Double,
+    @JvmField var longitude: Double,
+    @JvmField var speed: Float,
+    @JvmField var bearing: Float,
+    @JvmField var timestamp: Long,
+    @JvmField var source: LocationSource,
+    @JvmField var confidence: Float,
+    @JvmField var altitude: Float = 0f,
+    @JvmField var isFromMockProvider: Boolean = false,
+    @JvmField var provider: String? = null
 ) {
+    constructor(latitude: Double, longitude: Double) : this(
+        latitude = latitude,
+        longitude = longitude,
+        speed = 0f,
+        bearing = 0f,
+        timestamp = System.currentTimeMillis(),
+        source = LocationSource.GPS,
+        confidence = 1.0f
+    )
+
     enum class LocationSource {
         GPS,
         INERTIAL,
@@ -31,6 +41,7 @@ data class Location(
     fun hasBearing(): Boolean = bearing != 0f
 
     companion object {
+        @JvmStatic
         fun fromAndroidLocation(loc: AndroidLocation): Location {
             return Location(
                 latitude = loc.latitude,
