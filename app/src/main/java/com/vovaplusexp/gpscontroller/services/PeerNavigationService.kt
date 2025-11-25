@@ -57,10 +57,15 @@ class PeerNavigationService : Service() {
 
             if (totalWeight == 0.0) return null
 
-            val fused = Location(weightedLat / totalWeight, weightedLon / totalWeight)
-            fused.source = Location.LocationSource.PEER_FUSED
-            fused.confidence = (totalWeight / peerEstimates.size).toFloat()
-            return fused
+            return Location(
+                latitude = weightedLat / totalWeight,
+                longitude = weightedLon / totalWeight,
+                speed = 0f,
+                bearing = 0f,
+                timestamp = System.currentTimeMillis(),
+                source = Location.LocationSource.PEER_FUSED,
+                confidence = (totalWeight / peerEstimates.size).toFloat()
+            )
         }
     }
 

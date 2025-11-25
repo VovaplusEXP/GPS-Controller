@@ -26,11 +26,15 @@ class PeerSyncProtocol {
         val longitude = buffer.double
         val confidence = buffer.float
 
-        val location = Location(latitude, longitude).apply {
-            this.confidence = confidence
-            this.timestamp = timestamp
-            this.source = Location.LocationSource.PEER_FUSED
-        }
+        val location = Location(
+            latitude = latitude,
+            longitude = longitude,
+            speed = 0f,
+            bearing = 0f,
+            timestamp = timestamp,
+            source = Location.LocationSource.PEER_FUSED,
+            confidence = confidence
+        )
 
         return PeerEstimate(location, deviceId, timestamp)
     }

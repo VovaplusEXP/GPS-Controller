@@ -29,12 +29,15 @@ class SimpleRoadSnapper @Inject constructor(private val roadDatabase: RoadDataba
 
             if (distance < minDistance && distance < MAX_SNAP_DISTANCE) {
                 minDistance = distance
-                val snapped = Location(closestPoint[0], closestPoint[1])
-                snapped.confidence = location.confidence
-                snapped.speed = location.speed
-                snapped.bearing = calculateBearing(road)
-                snapped.source = Location.LocationSource.MAP_MATCHED
-                bestSnap = snapped
+                bestSnap = Location(
+                    latitude = closestPoint[0],
+                    longitude = closestPoint[1],
+                    speed = location.speed,
+                    bearing = calculateBearing(road),
+                    timestamp = location.timestamp,
+                    source = Location.LocationSource.MAP_MATCHED,
+                    confidence = location.confidence
+                )
             }
         }
         return bestSnap
