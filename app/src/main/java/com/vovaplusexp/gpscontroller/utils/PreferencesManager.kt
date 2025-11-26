@@ -18,4 +18,12 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
     fun isPeerEnabled(): Boolean {
         return prefs.getBoolean("peer_enabled", false)
     }
+
+    var isSetupComplete: Boolean
+        get() = prefs.getBoolean("setup_complete", false)
+        set(value) = prefs.edit().putBoolean("setup_complete", value).apply()
+
+    var isMapDownloaded: Boolean
+        get() = prefs.getBoolean("map_downloaded", false)
+        set(value) = prefs.edit().putBoolean("map_downloaded", value).apply()
 }

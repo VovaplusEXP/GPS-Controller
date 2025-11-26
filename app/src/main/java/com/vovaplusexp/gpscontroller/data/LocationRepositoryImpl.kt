@@ -3,7 +3,6 @@ package com.vovaplusexp.gpscontroller.data
 import android.annotation.SuppressLint
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Bundle
 import com.vovaplusexp.gpscontroller.models.Location
 import com.vovaplusexp.gpscontroller.services.NavigationServiceManager
 import com.vovaplusexp.gpscontroller.spoofing.GpsSpoofingDetector
@@ -46,6 +45,9 @@ class LocationRepositoryImpl @Inject constructor(
         override fun onProviderDisabled(provider: String) {
             _statusFlow.value = "GPS disabled"
         }
+
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
     }
 
     override fun getLocationFlow(): Flow<Location?> = _locationFlow.asStateFlow()
@@ -60,12 +62,13 @@ class LocationRepositoryImpl @Inject constructor(
 
         scope.launch {
             serviceManager.inertialServiceFlow
+                .filterNotNull()
                 .flatMapLatest { service ->
-                    service?.locationFlow ?: flowOf(null)
+                    service.currentLocation
                 }
                 .collect { location ->
                     inertialLocation = location
-                    if (location != null && isSpoofing) {
+                    if (isSpoofing) {
                         updateFinalLocation(location)
                     }
                 }
@@ -90,7 +93,7 @@ class LocationRepositoryImpl @Inject constructor(
                 isSpoofing = false
                 _statusFlow.value = "GPS: Normal"
                 updateFinalLocation(location)
-                serviceManager.initializeInertialLocation(location)
+                serviceManager.resetInertialService(location)
             }
             LocationTrust.TrustLevel.SUSPICIOUS -> {
                 isSpoofing = false

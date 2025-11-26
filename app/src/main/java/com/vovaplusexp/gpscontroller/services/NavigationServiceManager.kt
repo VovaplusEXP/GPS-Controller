@@ -74,9 +74,9 @@ class NavigationServiceManager @Inject constructor(
         context.stopService(Intent(context, MockLocationService::class.java))
     }
 
-    fun initializeInertialLocation(location: Location) {
+    fun resetInertialService(location: Location) {
         scope.launch {
-            _inertialService.value?.initializeLocation(location)
+            _inertialService.value?.resetToLocation(location)
         }
     }
 

@@ -7,16 +7,17 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  */
-package com.vovaplusexp.gpscontroller.fragments;
+package com.vovaplusexp.gpscontroller.fragments
 
-import androidx.preference.PreferenceFragmentCompat;
+import android.os.Bundle
+import androidx.preference.PreferenceFragmentCompat
+import com.vovaplusexp.gpscontroller.R
 
 /**
  * Fragment for app settings
  */
-public class SettingsFragment extends PreferenceFragmentCompat {
-    @Override
-    public void onCreatePreferences(android.os.Bundle savedInstanceState, String rootKey) {
-        setPreferencesFromResource(com.vovaplusexp.gpscontroller.R.xml.preferences, rootKey);
+class SettingsFragment : PreferenceFragmentCompat() {
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        setPreferencesFromResource(R.xml.preferences, rootKey)
     }
 }

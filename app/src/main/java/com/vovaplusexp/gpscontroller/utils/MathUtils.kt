@@ -2,6 +2,27 @@ package com.vovaplusexp.gpscontroller.utils
 
 import kotlin.math.*
 
+fun lowPassFilter(input: FloatArray, output: FloatArray?, alpha: Float): FloatArray {
+    val result = output ?: FloatArray(input.size)
+    for (i in input.indices) {
+        result[i] = result[i] + alpha * (input[i] - result[i])
+    }
+    return result
+}
+
+fun removeGravity(accel: FloatArray, gravity: FloatArray): FloatArray {
+    val linearAcceleration = FloatArray(3)
+    linearAcceleration[0] = accel[0] - gravity[0]
+    linearAcceleration[1] = accel[1] - gravity[1]
+    linearAcceleration[2] = accel[2] - gravity[2]
+    return linearAcceleration
+}
+
+fun FloatArray.magnitude(): Float {
+    return sqrt(this[0] * this[0] + this[1] * this[1] + this[2] * this[2])
+}
+
+
 object MathUtils {
 
     fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

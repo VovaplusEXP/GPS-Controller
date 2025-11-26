@@ -16,10 +16,10 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     val locationFlow: StateFlow<Location?> = locationRepository.getLocationFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     val statusFlow: StateFlow<String> = locationRepository.getStatusFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Idle")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Idle")
 
     fun startUpdates() {
         locationRepository.startLocationUpdates()
